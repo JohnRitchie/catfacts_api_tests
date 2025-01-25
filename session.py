@@ -1,33 +1,73 @@
 import json
 import pytest
-from requests import Session
-from pydantic import ValidationError
+from requests import Session, Response
+from pydantic import ValidationError, BaseModel
+from typing import Type, Tuple, Any, Dict
 
 
-class HTTPSession(Session):
-    @classmethod
-    def send_request(cls, request_type, endpoint, model, **params):
-        response = request_type(endpoint, **params)
-        response_text = json.loads(response.text)
-        cls.validate_response(response_text, model)
-        return response.status_code, response_text
+class HTTPSession:
+    def __init__(self):
+        self.session = Session()
 
-    @classmethod
-    def validate_response(cls, response_text, model):
+    def send_request(
+        self, method: str, url: str, model: Type[BaseModel], **kwargs: Any
+    ) -> tuple[int, BaseModel]:
+        """
+        Sends an HTTP request and validates the response.
+
+        :param method: HTTP method (GET, POST, etc.)
+        :param url: Endpoint URL
+        :param model: Pydantic model to validate response
+        :param kwargs: Additional parameters (headers, params, data, etc.)
+        :return: Tuple of (status_code, validated response data)
+        """
         try:
-            return model(**response_text)
+            response = self.session.request(method, url, **kwargs)
+            response.raise_for_status()  # Raise exception for HTTP errors (4xx, 5xx)
+            response_data = self.parse_response(response)
+            validated_data = self.validate_response(response_data, model)
+            return response.status_code, validated_data
         except ValidationError as e:
-            pytest.fail(f"Validation failed: {e}")
+            pytest.fail(f"Response validation failed: {e}")
+        except json.JSONDecodeError:
+            pytest.fail(f"Invalid JSON response from {url}: {response.text}")
+        except Exception as e:
+            pytest.fail(f"Request failed: {e}")
+
+    @staticmethod
+    def parse_response(response: Response) -> Dict[str, Any]:
+        """
+        Parses JSON response safely.
+
+        :param response: Response object
+        :return: Parsed JSON data as dictionary
+        """
+        return response.json()
+
+    @staticmethod
+    def validate_response(response_data: Dict[str, Any], model: Type[BaseModel]) -> BaseModel:
+        """
+        Validates response against a Pydantic model.
+
+        :param response_data: JSON data from response
+        :param model: Pydantic model
+        :return: Validated data
+        """
+        return model(**response_data)
 
 
-class RequestTypes(object):
-    GET = HTTPSession().get
+class RequestTypes:
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
 
 
-class Endpoints(object):
-    BASE_URL = 'https://cat-fact.herokuapp.com'
-    FACTS = BASE_URL + '/facts'
+class Endpoints:
+    BASE_URL = "https://cat-fact.herokuapp.com"
+    FACTS = f"{BASE_URL}/facts"
 
 
-class StatusCodes(object):
+class StatusCodes:
     HTTP_OK = 200
+    HTTP_NOT_FOUND = 404
