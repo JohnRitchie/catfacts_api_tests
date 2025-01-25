@@ -3,7 +3,6 @@ import pytest
 from session import HTTPSession
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope='session')
 def http_object():
-    http_object = HTTPSession()
-    return http_object
+    return HTTPSession()

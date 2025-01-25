@@ -1,8 +1,9 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class StatusModel(BaseModel):
-    verified: bool | None
+    verified: Optional[bool]
     sentCount: int
 
 class RandomFactsModel(BaseModel):
