@@ -1,12 +1,23 @@
 import json
+import pytest
 from requests import Session
+from pydantic import ValidationError
 
 
 class HTTPSession(Session):
-    @staticmethod
-    def send_request(request_type, endpoint, **params):
+    @classmethod
+    def send_request(cls, request_type, endpoint, model, **params):
         response = request_type(endpoint, **params)
-        return response.status_code, json.loads(response.text)
+        response_text = json.loads(response.text)
+        cls.validate_response(response_text, model)
+        return response.status_code, response_text
+
+    @classmethod
+    def validate_response(cls, response_text, model):
+        try:
+            return model(**response_text)
+        except ValidationError as e:
+            pytest.fail(f"Validation failed: {e}")
 
 
 class RequestTypes(object):
