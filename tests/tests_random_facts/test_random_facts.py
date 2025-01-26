@@ -1,3 +1,4 @@
+from assertpy import assert_that
 from session import Endpoints, RequestTypes, StatusCodes
 from tests.tests_random_facts.random_facts_models import RandomFactsModel
 
@@ -7,4 +8,4 @@ PATH = f'{ENDPOINT}/random'
 class TestRandomFacts:
     def test_api_status_code(self, http_object):
         status_code, _ = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)
-        assert status_code == StatusCodes.HTTP_OK
+        assert_that(status_code).is_equal_to(StatusCodes.HTTP_OK)
