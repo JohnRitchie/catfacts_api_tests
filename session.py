@@ -73,6 +73,13 @@ class HTTPSession:
             name="Request Parameters",
             attachment_type=allure.attachment_type.JSON,
         )
+
+        allure.attach(
+            json.dumps(dict(response.request.headers), indent=2),
+            name="Request Headers",
+            attachment_type=allure.attachment_type.JSON,
+        )
+
         allure.attach(
             json.dumps(response.json(), indent=2),
             name="Response Body",
