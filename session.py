@@ -1,4 +1,5 @@
 import json
+import allure
 import pytest
 from requests import Session, Response
 from pydantic import ValidationError, BaseModel
@@ -9,6 +10,7 @@ class HTTPSession:
     def __init__(self):
         self.session = Session()
 
+    @allure.step("Sending {method} request to {url}")
     def send_request(
         self, method: str, url: str, model: Type[BaseModel], **kwargs: Any
     ) -> tuple[int, BaseModel]:
@@ -23,7 +25,8 @@ class HTTPSession:
         """
         try:
             response = self.session.request(method, url, **kwargs)
-            response.raise_for_status()  # Raise exception for HTTP errors (4xx, 5xx)
+            response.raise_for_status()
+            self.log_request_response(response, kwargs)
             response_data = self.parse_response(response)
             validated_data = self.validate_response(response_data, model)
             return response.status_code, validated_data
@@ -35,6 +38,7 @@ class HTTPSession:
             pytest.fail(f"Request failed: {e}")
 
     @staticmethod
+    @allure.step("Parsing response")
     def parse_response(response: Response) -> Dict[str, Any]:
         """
         Parses JSON response safely.
@@ -45,6 +49,7 @@ class HTTPSession:
         return response.json()
 
     @staticmethod
+    @allure.step("Validating response with Pydantic model")
     def validate_response(response_data: Dict[str, Any], model: Type[BaseModel]) -> BaseModel:
         """
         Validates response against a Pydantic model.
@@ -54,6 +59,30 @@ class HTTPSession:
         :return: Validated data
         """
         return model(**response_data)
+
+    @staticmethod
+    @allure.step("Logging request and response")
+    def log_request_response(response: Response, request_kwargs: Dict[str, Any]):
+        """
+        Logs request and response details to Allure.
+        :param response: Response object
+        :param request_kwargs: Additional request parameters
+        """
+        allure.attach(
+            json.dumps(request_kwargs, indent=2),
+            name="Request Parameters",
+            attachment_type=allure.attachment_type.JSON,
+        )
+        allure.attach(
+            json.dumps(response.json(), indent=2),
+            name="Response Body",
+            attachment_type=allure.attachment_type.JSON,
+        )
+        allure.attach(
+            f"Status Code: {response.status_code}",
+            name="Response Status Code",
+            attachment_type=allure.attachment_type.TEXT,
+        )
 
 
 class RequestTypes:
