@@ -6,6 +6,6 @@ ENDPOINT = Endpoints.FACTS
 PATH = f'{ENDPOINT}/random'
 
 class TestRandomFacts:
-    def test_api_status_code(self, http_object):
+    def test_status_code_ok(self, http_object):
         status_code, _ = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)
         assert_that(status_code).is_equal_to(StatusCodes.HTTP_OK)
