@@ -17,6 +17,13 @@ class TestRandomFacts:
         with allure.step("Validate HTTP status code"):
             assert_that(status_code).is_equal_to(StatusCodes.HTTP_OK)
 
+    @allure.title("Test API returns non-empty fact text")
+    def test_non_empty_text(self, http_object):
+        with allure.step("Send GET request"):
+            _, data = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)
+        with allure.step("Validate text of fact"):
+            assert_that(data.text).is_not_empty()
+
     @allure.title("Test response body contains all expected fields")
     def test_response_contains_all_fields(self, http_object):
         with allure.step("Send GET request"):
@@ -44,12 +51,13 @@ class TestRandomFacts:
         with allure.step("Validate data type"):
             assert_that(data.type).is_equal_to('horse')
 
-    @allure.title("Test API returns non-empty fact text")
-    def test_non_empty_text(self, http_object):
-        with allure.step("Send GET request"):
-            _, data = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)
-        with allure.step("Validate text of fact"):
-            assert_that(data.text).is_not_empty()
+    @allure.title("Test API ignores unsupported parameters")
+    def test_unsupported_parameters(self, http_object):
+        with allure.step("Send GET request with unsupported parameters"):
+            _, data = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel,
+                                               params={"unknown_param": "test"})
+        with allure.step("Validate response ignores unsupported parameters"):
+            assert_that(data.type).is_equal_to('cat')
 
     @allure.title("Test createdAt and updatedAt have correct format")
     def test_datetime_format(self, http_object):
@@ -66,21 +74,6 @@ class TestRandomFacts:
         with allure.step("Validate response encoding"):
             assert_that(response.encoding).is_equal_to("utf-8")
 
-    @allure.title("Test multiple requests returns unique facts")
-    def test_unique_facts(self, http_object):
-        with allure.step("Send multiple GET requests"):
-            facts = [http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)[1].text for _ in range(10)]
-        with allure.step("Validate that all facts are unique"):
-            assert_that(facts).does_not_contain_duplicates()
-
-    @allure.title("Test API ignores unsupported parameters")
-    def test_unsupported_parameters(self, http_object):
-        with allure.step("Send GET request with unsupported parameters"):
-            _, data = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel,
-                                               params={"unknown_param": "test"})
-        with allure.step("Validate response ignores unsupported parameters"):
-            assert_that(data.type).is_equal_to('cat')
-
     @allure.title("Test API does not cache responses")
     def test_no_caching(self, http_object):
         with allure.step("Send two GET requests"):
@@ -88,6 +81,13 @@ class TestRandomFacts:
             _, data2 = http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)
         with allure.step("Validate that responses are not cached"):
             assert_that(data1.text).is_not_equal_to(data2.text)
+
+    @allure.title("Test multiple requests returns unique facts")
+    def test_unique_facts(self, http_object):
+        with allure.step("Send multiple GET requests"):
+            facts = [http_object.send_request(RequestTypes.GET, PATH, RandomFactsModel)[1].text for _ in range(10)]
+        with allure.step("Validate that all facts are unique"):
+            assert_that(facts).does_not_contain_duplicates()
 
     @allure.title("Test API handles high load of parallel requests")
     def test_high_load(self, http_object):
